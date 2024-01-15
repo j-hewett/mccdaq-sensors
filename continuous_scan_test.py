@@ -118,11 +118,11 @@ def main():
             hat.a_in_scan_stop()
             hat.a_in_scan_cleanup()
             
-            print(data_total)
+            #print(data_total)
             data_total = [0.0 if x is None else x for x in data_total]
             data = np.array(data_total)
-            print(data)
-            np.savetxt("test.csv",a,delimiter=",")
+            #print(data)
+            np.savetxt("test.csv",data,delimiter=",")
             
 
     except (HatError, ValueError) as err:
@@ -157,6 +157,9 @@ def read_display_and_store_data(hat, num_channels):
     # to -1 (READ_ALL_AVAILABLE), this function returns immediately with
     # whatever samples are available (up to user_buffer_size) and the timeout
     # parameter is ignored.
+
+    global data_total
+
     while True:
         read_result = hat.a_in_scan_read(read_request_size, timeout)
         
@@ -173,7 +176,7 @@ def read_display_and_store_data(hat, num_channels):
         total_samples_read += samples_read_per_channel
         
         #Add to total list
-        data_total.append(read_result.data)
+        data_total = data_total + read_result.data
 
         # Display the last sample for each channel.
         print('\r{:12}'.format(samples_read_per_channel),
