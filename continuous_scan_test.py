@@ -23,7 +23,7 @@ from __future__ import print_function
 import numpy as np
 import csv
 from sys import stdout
-from time import sleep
+import time
 from daqhats import mcc128, OptionFlags, HatIDs, HatError, AnalogInputMode, \
     AnalogInputRange
 from daqhats_utils import select_hat_device, enum_mask_to_string, \
@@ -97,6 +97,7 @@ def main():
         # parameter is ignored if the value is less than the default internal
         # buffer size (10000 * num_channels in this case). If a larger internal
         # buffer size is desired, set the value of this parameter accordingly.
+        tstart = time.time()
         hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate,
                             options)
 
@@ -112,17 +113,24 @@ def main():
             read_display_and_store_data(hat, num_channels)
 
         except KeyboardInterrupt:
-            # Clear the '^C' from the display.
+            # Stop scan (and clear the '^C' from the display).
+            hat.a_in_scan_stop()
+            tend = time.time()
+            hat.a_in_scan_cleanup()
             print(CURSOR_BACK_2, ERASE_TO_END_OF_LINE, '\n')
             print('Stopping')
-            hat.a_in_scan_stop()
-            hat.a_in_scan_cleanup()
+            runtime = tend-tstart
+            datetime = time.strftime('%Y-%m-%dT%H:%M:%S',(time.gmtime(tstart)))
+            filename = datetime + '.csv'
             
-            #print(data_total)
+            #Deal with NaN errors and convert data to np array for saving
             data_total = [0.0 if x is None else x for x in data_total]
             data = np.array(data_total)
-            #print(data)
-            np.savetxt("test.csv",data,delimiter=",")
+            arrlen = np.size(data)
+            t = np.linspace(0,runtime,num=arrlen)
+            data = np.vstack((data,t))
+            print(data)
+            np.savetxt(filename,data.transpose(),delimiter=",")
             
 
     except (HatError, ValueError) as err:
@@ -190,7 +198,7 @@ def read_display_and_store_data(hat, num_channels):
                       end='')
             stdout.flush()
 
-            sleep(0.1)
+            time.sleep(0.1)
 
     print('\n')
 
