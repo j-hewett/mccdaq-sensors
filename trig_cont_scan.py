@@ -53,14 +53,9 @@ def main():
     input_range = AnalogInputRange.BIP_10V
     trig_mode = TriggerModes.RISING_EDGE
 
-    options = [
-        OptionFlags.EXTTRIGGER,
-        OptionFlags.CONTINUOUS
-    ] 
+    options = OptionFlags.EXTTRIGGER | OptionFlags.CONTINUOUS #OR combination of flags
 
     samples_per_channel = 0
-
-    
     
     global data_total 
     data_total = []
@@ -90,7 +85,7 @@ def main():
         print(', '.join([str(chan) for chan in channels]))
         print('    Requested scan rate: ', scan_rate)
         print('    Actual scan rate: ', actual_scan_rate)
-        print('    Options: ', enum_mask_to_string(OptionFlags, options))
+        #print('    Options: ', enum_mask_to_string(OptionFlags, options))
 
         try:
             input('\nPress ENTER to continue ...')
@@ -100,8 +95,7 @@ def main():
 
         # Configure and start the scan.
         tstart = time.time()
-        hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate,
-                            options)
+        hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate, options)
 
         try:
             print('\nWaiting for trigger... hit Ctrl-C to cancel')
