@@ -21,6 +21,9 @@
 """
 from __future__ import print_function
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import style
 import csv
 from sys import stdout
 import time
@@ -57,6 +60,10 @@ def main():
     data_total = []
 
     scan_rate = 1000.0
+
+    sf = 360/10 #Zero degrees at zero volts ()
+
+    savetrue = input("Save data? Y/N")
 
     try:
         # Select an MCC 128 HAT device to use.
@@ -124,13 +131,15 @@ def main():
             filename = datetime + '.csv'
             
             #Deal with NaN errors and convert data to np array for saving
-            data_total = [0.0 if x is None else x for x in data_total]
-            data = np.array(data_total)
-            arrlen = np.size(data)
-            t = np.linspace(0,runtime,num=arrlen)
-            data = np.vstack((data,t))
-            print(data)
-            np.savetxt(filename,data.transpose(),delimiter=",")
+            if savetrue == 'Y':
+                data_total = [0.0 if x is None else x for x in data_total]
+                data = np.array(data_total)
+                arrlen = np.size(data)
+                t = np.linspace(0,runtime,num=arrlen)
+                data = np.vstack((data,t))
+                print(data)
+                np.savetxt(filename,data.transpose(),delimiter=",")
+            
             
 
     except (HatError, ValueError) as err:
