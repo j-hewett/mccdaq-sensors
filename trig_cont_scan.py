@@ -56,7 +56,7 @@ def main():
     options = OptionFlags.EXTTRIGGER | OptionFlags.CONTINUOUS #OR combination of flags
 
     samples_per_channel = 0
-    
+ 
     global data_total 
     data_total = []
 
@@ -85,7 +85,7 @@ def main():
         print(', '.join([str(chan) for chan in channels]))
         print('    Requested scan rate: ', scan_rate)
         print('    Actual scan rate: ', actual_scan_rate)
-        #print('    Options: ', enum_mask_to_string(OptionFlags, options))
+        print('    Options: ', enum_mask_to_string(OptionFlags, options))
 
         try:
             input('\nPress ENTER to continue ...')
@@ -95,12 +95,14 @@ def main():
 
         # Configure and start the scan.
         tstart = time.time()
-        hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate, options)
+        hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate,
+                            options)
 
         try:
-            print('\nWaiting for trigger... hit Ctrl-C to cancel')
+            print('\nWaiting for trigger... hit trigger to cancel')
             wait_for_trigger(hat)
-            print('\nStarting scan... Press Ctrl-C to stop\n')
+            print('\nStarting scan... Press trigger to stop\n')
+            is_triggered = False
 
             # Display the header row for the data table.
             print('Samples Read    Scan Count', end='')
@@ -109,8 +111,10 @@ def main():
             print('')
 
             read_display_and_store_data(hat, num_channels)
+            status = hat.a_in_scan_status()
+            is_triggered = status.triggered
 
-        except KeyboardInterrupt:
+        except is_triggered:
             # Stop scan (and clear the '^C' from the display).
             hat.a_in_scan_stop()
             tend = time.time()
@@ -130,7 +134,9 @@ def main():
                 data = np.vstack((data,t))
                 print(data)
                 np.savetxt(filename,data.transpose(),delimiter=",")
-            
+        except KeyboardInterrupt:
+            hat.a_in_scan_stop()
+            hat.a_in_scan_cleanup()    
             
 
     except (HatError, ValueError) as err:
