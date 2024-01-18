@@ -28,7 +28,7 @@ import csv
 from sys import stdout
 import time
 from daqhats import mcc128, OptionFlags, HatIDs, HatError, AnalogInputMode, \
-    AnalogInputRange
+    AnalogInputRange, TriggerModes
 from daqhats_utils import select_hat_device, enum_mask_to_string, \
     chan_list_to_mask, input_mode_to_string, input_range_to_string
 
@@ -51,19 +51,25 @@ def main():
 
     input_mode = AnalogInputMode.SE
     input_range = AnalogInputRange.BIP_10V
+    trig_mode = TriggerModes.RISING_EDGE
+
+    options = [
+        OptionFlags.EXTTRIGGER,
+        OptionFlags.CONTINUOUS
+    ] 
 
     samples_per_channel = 0
 
-    options = OptionFlags.CONTINUOUS
+    
     
     global data_total 
     data_total = []
 
     scan_rate = 1000.0
 
-    sf = 360/10 #Zero degrees at zero volts ()
+    sf = 360/10 #Zero degrees set at zero volts (i.e. from reference calibration point, subject to change)
 
-    savetrue = input("Save data? Y/N")
+    savetrue = input("Save data? Y/N") 
 
     try:
         # Select an MCC 128 HAT device to use.
@@ -72,19 +78,12 @@ def main():
 
         hat.a_in_mode_write(input_mode)
         hat.a_in_range_write(input_range)
+        hat.trigger_mode(trig_mode)
 
         print('\nSelected MCC 128 HAT device at address', address)
 
         actual_scan_rate = hat.a_in_scan_actual_rate(num_channels, scan_rate)
 
-        print('\nMCC 128 continuous scan example')
-        print('    Functions demonstrated:')
-        print('         mcc128.a_in_scan_start')
-        print('         mcc128.a_in_scan_read')
-        print('         mcc128.a_in_scan_stop')
-        print('         mcc128.a_in_scan_cleanup')
-        print('         mcc128.a_in_mode_write')
-        print('         mcc128.a_in_range_write')
         print('    Input mode: ', input_mode_to_string(input_mode))
         print('    Input range: ', input_range_to_string(input_range))
         print('    Channels: ', end='')
@@ -100,23 +99,21 @@ def main():
 
 
         # Configure and start the scan.
-        # Since the continuous option is being used, the samples_per_channel
-        # parameter is ignored if the value is less than the default internal
-        # buffer size (10000 * num_channels in this case). If a larger internal
-        # buffer size is desired, set the value of this parameter accordingly.
         tstart = time.time()
         hat.a_in_scan_start(channel_mask, samples_per_channel, scan_rate,
                             options)
 
-        print('Starting scan ... Press Ctrl-C to stop\n')
-
-        # Display the header row for the data table.
-        print('Samples Read    Scan Count', end='')
-        for chan, item in enumerate(channels):
-            print('    Channel ', item, sep='', end='')
-        print('')
-
         try:
+            print('\nWaiting for trigger... hit Ctrl-C to cancel')
+            wait_for_trigger(hat)
+            print('\nStarting scan... Press Ctrl-C to stop\n')
+
+            # Display the header row for the data table.
+            print('Samples Read    Scan Count', end='')
+            for chan, item in enumerate(channels):
+                print('    Channel ', item, sep='', end='')
+            print('')
+
             read_display_and_store_data(hat, num_channels)
 
         except KeyboardInterrupt:
@@ -210,6 +207,29 @@ def read_display_and_store_data(hat, num_channels):
             time.sleep(0.1)
 
     print('\n')
+
+def wait_for_trigger(hat):
+    """
+    Monitor the status of the specified HAT device in a loop until the
+    triggered status is True or the running status is False.
+
+    Args:
+        hat (mcc128): The mcc128 HAT device object on which the status will
+            be monitored.
+
+    Returns:
+        None
+
+    """
+    # Read the status only to determine when the trigger occurs.
+    is_running = True
+    is_triggered = False
+    while is_running and not is_triggered:
+        status = hat.a_in_scan_status()
+        is_running = status.running
+        is_triggered = status.triggered
+        if not is_triggered:
+            time.sleep(0.001)
 
 if __name__ == '__main__':
     main()
