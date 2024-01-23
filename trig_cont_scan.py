@@ -45,7 +45,7 @@ def main():
 
     # Store the channels in a list and convert the list to a channel mask that
     # can be passed as a parameter to the MCC 128 functions.
-    channels = [0]
+    channels = [0,1]
     channel_mask = chan_list_to_mask(channels)
     num_channels = len(channels)
 
@@ -111,10 +111,8 @@ def main():
             print('')
 
             read_display_and_store_data(hat, num_channels)
-            status = hat.a_in_scan_status()
-            is_triggered = status.triggered
 
-        except is_triggered:
+        except KeyboardInterrupt:
             # Stop scan (and clear the '^C' from the display).
             hat.a_in_scan_stop()
             tend = time.time()
@@ -133,10 +131,7 @@ def main():
                 t = np.linspace(0,runtime,num=arrlen)
                 data = np.vstack((data,t))
                 print(data)
-                np.savetxt(filename,data.transpose(),delimiter=",")
-        except KeyboardInterrupt:
-            hat.a_in_scan_stop()
-            hat.a_in_scan_cleanup()    
+                np.savetxt(filename,data.transpose(),delimiter=",")  
             
 
     except (HatError, ValueError) as err:
@@ -171,6 +166,9 @@ def read_display_and_store_data(hat, num_channels):
     # to -1 (READ_ALL_AVAILABLE), this function returns immediately with
     # whatever samples are available (up to user_buffer_size) and the timeout
     # parameter is ignored.
+
+    is_triggered = False
+    status = hat.a_in_scan_status()
 
     global data_total
 
